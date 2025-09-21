@@ -8,11 +8,11 @@ all: build
 
 # Build the application
 build:
-	go build -o $(BINARY_NAME) .
+	go build -o $(BINARY_NAME) ./cmd/wandering-inn
 
 # Run the application
 run:
-	go run .
+	go run ./cmd/wandering-inn
 
 # Install dependencies
 install:
