@@ -34,4 +34,3 @@ func main() {
 		log.Fatalf("Error creating EPUB: %v", err)
 	}
 }
-

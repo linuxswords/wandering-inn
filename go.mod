@@ -1,4 +1,4 @@
-module wandering-inn-epub
+module github.com/linuxswords/wandering-inn
 
 go 1.21
 
