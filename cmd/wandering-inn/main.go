@@ -22,7 +22,7 @@ func main() {
 
 	cli.PrintChapterInfo(chapters)
 
-	startIndex := cli.GetStartChapter(len(chapters))
+	startIndex := cli.GetStartChapterInteractive(chapters, len(chapters))
 	selectedChapters := chapters[startIndex-1:]
 
 	cli.PrintCreationInfo(len(selectedChapters), startIndex)
