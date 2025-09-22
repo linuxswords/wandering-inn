@@ -22,7 +22,7 @@ install:
 clean:
 	go clean
 	rm -f $(BINARY_NAME)
-	rm -f wandering_inn.epub
+	rm -f *.epub
 
 # Format code
 fmt:
