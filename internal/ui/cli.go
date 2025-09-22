@@ -44,22 +44,22 @@ func (cli *CLI) PrintChapterInfo(chapters []models.Chapter) {
 	}
 }
 
-func (cli *CLI) GetStartChapter(totalChapters int) int {
-	return cli.GetStartChapterInteractive(nil, totalChapters)
+func (cli *CLI) GetStartChapter() int {
+	return cli.GetStartChapterInteractive(nil)
 }
 
-func (cli *CLI) GetStartChapterInteractive(chapters []models.Chapter, totalChapters int) int {
+func (cli *CLI) GetStartChapterInteractive(chapters []models.Chapter) int {
 	m := chapterSelectorModel{
 		chapters: chapters,
-		cursor:   totalChapters - 1, // Start from the last chapter (0-indexed)
-		total:    totalChapters,
+		cursor:   len(chapters) - 1, // Start from the last chapter (0-indexed)
+		total:    len(chapters),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
 		// Fallback to text input if bubbletea fails
-		return cli.getStartChapterTextInput(totalChapters)
+		return cli.getStartChapterTextInput(len(chapters))
 	}
 
 	if finalModel.(chapterSelectorModel).quit {
@@ -163,7 +163,6 @@ func (cli *CLI) getStartChapterTextInput(totalChapters int) int {
 	}
 }
 
-
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -185,3 +184,4 @@ func max(a, b int) int {
 	}
 	return b
 }
+
