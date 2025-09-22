@@ -62,4 +62,4 @@ EPUB created successfully: wandering_inn.epub
 
 - The tool ensures chapters are downloaded in the correct order as they appear in the table of contents
 - If a chapter fails to download, the tool will show a warning and continue with the next chapter
-- The resulting EPUB file will be named `wandering_inn.epub`
+- The resulting EPUB file will be named `wandering_inn_chaptertitle.epub`
