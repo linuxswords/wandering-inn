@@ -23,9 +23,11 @@ func main() {
 	cli.PrintChapterInfo(chapters)
 
 	startIndex := cli.GetStartChapterInteractive(chapters)
-	selectedChapters := chapters[startIndex-1:]
+	endIndex := cli.GetEndChapterInteractive(chapters, startIndex)
 
-	cli.PrintCreationInfo(len(selectedChapters), startIndex)
+	selectedChapters := chapters[startIndex-1 : endIndex]
+
+	cli.PrintCreationInfo(len(selectedChapters), startIndex, endIndex)
 
 	epubCreator.SetProgressCallback(cli.PrintDownloadProgress)
 

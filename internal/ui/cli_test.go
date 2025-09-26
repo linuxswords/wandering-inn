@@ -128,7 +128,7 @@ func TestCLI_GetStartChapter(t *testing.T) {
 				reader: bufio.NewReader(strings.NewReader(tt.input)),
 			}
 
-			result := cli.GetStartChapter(tt.totalChapters)
+			result := cli.getStartChapterTextInput(tt.totalChapters)
 			if result != tt.expected {
 				t.Errorf("GetStartChapter() = %v, want %v", result, tt.expected)
 			}
@@ -164,7 +164,7 @@ func TestCLI_PrintCreationInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// This function prints to stdout, so we just test that it doesn't panic
-			cli.PrintCreationInfo(tt.numChapters, tt.startIndex)
+			cli.PrintCreationInfo(tt.numChapters, tt.startIndex, tt.startIndex+tt.numChapters-1)
 		})
 	}
 }
@@ -294,7 +294,7 @@ func TestCLI_GetStartChapter_ReaderError(t *testing.T) {
 
 	// This will likely loop indefinitely or error due to our mock, but it shouldn't panic
 	go func() {
-		cli.GetStartChapter(10)
+		cli.getStartChapterTextInput(10)
 	}()
 }
 
