@@ -370,6 +370,11 @@ func TestHTMLParser_handleParagraph(t *testing.T) {
 			htmlStr:  `<p class="has-blue-color">Blue paragraph</p>`,
 			expected: `<p class="blue">Blue paragraph</p>` + "\n",
 		},
+		{
+			name:     "paragraph with emphasis",
+			htmlStr:  `<p>"I don't know. Get <em>me</em> something that brightens my day without turning me into a smiling loon, please? He's off his vacation next week; I'll live."</p>`,
+			expected: `<p>&#34;I don&#39;t know. Get <em>me</em> something that brightens my day without turning me into a smiling loon, please? He&#39;s off his vacation next week; I&#39;ll live.&#34;</p>` + "\n",
+		},
 	}
 
 	parser := NewHTMLParser()

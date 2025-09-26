@@ -174,6 +174,7 @@ func (p *HTMLParser) handleAnchor(n *html.Node) string {
 func (p *HTMLParser) isNavigationText(text string) bool {
 	text = strings.ToLower(strings.TrimSpace(text))
 
+	// Check for exact navigation patterns first
 	for _, term := range config.NavigationTerms {
 		if strings.Contains(text, term) {
 			return true
@@ -182,6 +183,19 @@ func (p *HTMLParser) isNavigationText(text string) bool {
 
 	if config.NavigationSymbolPattern.MatchString(text) {
 		return true
+	}
+
+	// Check for standalone navigation words only if they appear to be navigation links
+	// (short text, likely to be a standalone navigation element)
+	if len(text) < 30 {
+		lowerText := strings.ToLower(text)
+		if lowerText == "previous" || lowerText == "next" {
+			return true
+		}
+		// Check for common navigation patterns
+		if strings.Contains(lowerText, "← ") || strings.Contains(lowerText, " →") {
+			return true
+		}
 	}
 
 	return false

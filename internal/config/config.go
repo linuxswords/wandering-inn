@@ -23,8 +23,6 @@ var (
 		"next chapter",
 		"← previous",
 		"next →",
-		"previous",
-		"next",
 		"table of contents",
 		"toc",
 		"chapter index",
