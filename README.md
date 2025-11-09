@@ -20,11 +20,14 @@ A Go tool that creates EPUB files from The Wandering Inn webserial by pirateaba.
 
 1. Make sure you have Go installed (version 1.21 or higher)
 2. Clone this repository:
+
    ```bash
    git clone https://github.com/linuxswords/wandering-inn.git
    cd wandering-inn
    ```
+
 3. Install dependencies:
+
    ```bash
    go mod download
    ```
@@ -32,10 +35,13 @@ A Go tool that creates EPUB files from The Wandering Inn webserial by pirateaba.
 ## Usage
 
 1. Run the tool:
+
    ```bash
    go run ./cmd/wandering-inn
    ```
+
    Or build and run:
+
    ```bash
    go build ./cmd/wandering-inn
    ./wandering-inn
@@ -98,4 +104,4 @@ EPUB created successfully: wandering_inn_2.00-2.51.epub
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the AGPLv3 License - see the [LICENSE](LICENSE) file for details.
