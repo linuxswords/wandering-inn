@@ -1,4 +1,4 @@
-.PHONY: build run clean install help
+.PHONY: build run clean install help fmt lint
 
 # Binary name
 BINARY_NAME=wandering-inn-epub
@@ -26,7 +26,11 @@ clean:
 
 # Format code
 fmt:
-	go fmt ./...
+	gofmt -s -w .
+
+# Run linter
+lint:
+	go vet ./...
 
 # Run tests (if any exist)
 test:
@@ -45,5 +49,6 @@ help:
 	@echo "  install     - Install/update dependencies"
 	@echo "  clean       - Clean build artifacts and generated files"
 	@echo "  fmt         - Format Go code"
+	@echo "  lint        - Run linter (go vet)"
 	@echo "  test        - Run tests"
 	@echo "  help        - Show this help message"

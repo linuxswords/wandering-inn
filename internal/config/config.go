@@ -63,4 +63,3 @@ var (
 		"has-teal-color":    "teal",
 	}
 )
-

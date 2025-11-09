@@ -283,4 +283,3 @@ func (p *HTMLParser) sanitizeStyle(style string) string {
 
 	return ""
 }
-

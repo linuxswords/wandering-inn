@@ -94,4 +94,3 @@ func TestDefaultCSS_ColorStyles(t *testing.T) {
 		}
 	}
 }
-

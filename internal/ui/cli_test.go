@@ -319,4 +319,3 @@ func (r *erroringReader) Read(p []byte) (n int, err error) {
 	r.data = r.data[n:]
 	return n, nil
 }
-

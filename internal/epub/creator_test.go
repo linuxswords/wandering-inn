@@ -231,4 +231,3 @@ func TestEPUBCreator_ImplementsInterface(t *testing.T) {
 func TestMockFetcher_ImplementsInterface(t *testing.T) {
 	var _ ChapterContentFetcher = (*mockChapterContentFetcher)(nil)
 }
-
