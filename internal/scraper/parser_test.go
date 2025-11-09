@@ -114,6 +114,26 @@ func TestHTMLParser_isNavigationText(t *testing.T) {
 			text:     "   ",
 			expected: false,
 		},
+		{
+			name:     "toc as standalone word",
+			text:     "Click here for the toc of all chapters",
+			expected: true,
+		},
+		{
+			name:     "toc inside word 'restock'",
+			text:     "come here to restock on the plentiful catches of the [Fishers]",
+			expected: false,
+		},
+		{
+			name:     "toc inside word 'stock'",
+			text:     "the stock market is doing well",
+			expected: false,
+		},
+		{
+			name:     "toc inside word 'aristocrat'",
+			text:     "the aristocrat walked by",
+			expected: false,
+		},
 	}
 
 	parser := NewHTMLParser()

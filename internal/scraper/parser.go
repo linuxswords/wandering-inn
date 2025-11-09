@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/linuxswords/wandering-inn/internal/config"
@@ -176,8 +177,16 @@ func (p *HTMLParser) isNavigationText(text string) bool {
 
 	// Check for exact navigation patterns first
 	for _, term := range config.NavigationTerms {
-		if strings.Contains(text, term) {
-			return true
+		// Special handling for "toc" to avoid matching inside words like "restock"
+		if term == "toc" {
+			// Only match "toc" as a standalone word
+			if p.containsWord(text, "toc") {
+				return true
+			}
+		} else {
+			if strings.Contains(text, term) {
+				return true
+			}
 		}
 	}
 
@@ -199,6 +208,14 @@ func (p *HTMLParser) isNavigationText(text string) bool {
 	}
 
 	return false
+}
+
+// containsWord checks if a word appears as a standalone word (not as part of another word)
+func (p *HTMLParser) containsWord(text, word string) bool {
+	// Use regex word boundary \b to match whole words only
+	pattern := `\b` + regexp.QuoteMeta(word) + `\b`
+	matched, _ := regexp.MatchString(`(?i)`+pattern, text)
+	return matched
 }
 
 func (p *HTMLParser) isNavigationElement(n *html.Node) bool {
