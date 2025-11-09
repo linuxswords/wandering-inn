@@ -8,8 +8,23 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/linuxswords/wandering-inn/internal/config"
 	"github.com/linuxswords/wandering-inn/internal/models"
+)
+
+var (
+	// Style for the current cursor position
+	cursorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("15")). // White
+			Background(lipgloss.Color("63")). // Purple
+			Bold(true)
+
+	// Style for selected range (between start and cursor in end selector)
+	selectedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("0")).  // Black
+			Background(lipgloss.Color("120")). // Light green
+			Bold(false)
 )
 
 type CLI struct {
@@ -129,11 +144,14 @@ func (m chapterSelectorModel) View() string {
 		}
 
 		cursor := " "
+		line := fmt.Sprintf("%s %d. %s", cursor, i+1, chapterTitle)
+
 		if m.cursor == i {
 			cursor = ">"
+			line = cursorStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, chapterTitle))
 		}
 
-		s += fmt.Sprintf("%s %d. %s\n", cursor, i+1, chapterTitle)
+		s += line + "\n"
 	}
 
 	if start > 0 {
@@ -196,11 +214,21 @@ func (m endChapterSelectorModel) View() string {
 		}
 
 		cursor := " "
+		line := fmt.Sprintf("%s %d. %s", cursor, i+1, chapterTitle)
+
+		// Determine if this chapter is in the selected range
+		inSelectedRange := i >= m.startChapter-1 && i <= m.cursor
+
 		if m.cursor == i {
+			// Current cursor position - highlighted with cursor style
 			cursor = ">"
+			line = cursorStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, chapterTitle))
+		} else if inSelectedRange {
+			// In the selected range but not at cursor - show with selected style
+			line = selectedStyle.Render(fmt.Sprintf("%s %d. %s", cursor, i+1, chapterTitle))
 		}
 
-		s += fmt.Sprintf("%s %d. %s\n", cursor, i+1, chapterTitle)
+		s += line + "\n"
 	}
 
 	if start > m.startChapter-1 {
