@@ -1,5 +1,8 @@
 # Wandering Inn EPUB Creator
 
+[![Tests](https://github.com/linuxswords/wandering-inn/actions/workflows/test.yml/badge.svg)](https://github.com/linuxswords/wandering-inn/actions/workflows/test.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/linuxswords/wandering-inn)](https://goreportcard.com/report/github.com/linuxswords/wandering-inn)
+
 A Go tool that creates EPUB files from The Wandering Inn webserial by pirateaba.
 
 ## Features
