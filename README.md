@@ -2,6 +2,7 @@
 
 [![Tests](https://github.com/linuxswords/wandering-inn/actions/workflows/test.yml/badge.svg)](https://github.com/linuxswords/wandering-inn/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/linuxswords/wandering-inn)](https://goreportcard.com/report/github.com/linuxswords/wandering-inn)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A Go tool that creates EPUB files from The Wandering Inn webserial by pirateaba.
 
@@ -94,3 +95,7 @@ EPUB created successfully: wandering_inn_2.00-2.51.epub
 - If a chapter fails to download, the tool will show a warning and continue with the next chapter
 - The resulting EPUB file will be named based on the selected chapters (e.g., `wandering_inn_2.00-2.51.epub`)
 - You can quit the interactive selectors at any time by pressing 'q' or ESC
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
