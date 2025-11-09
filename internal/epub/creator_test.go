@@ -100,7 +100,6 @@ func TestEPUBCreator_CreateEPUB(t *testing.T) {
 
 	// Create EPUB
 	err := creator.CreateEPUB(chapters, fetcher)
-
 	if err != nil {
 		t.Fatalf("CreateEPUB() failed: %v", err)
 	}
@@ -142,7 +141,6 @@ func TestEPUBCreator_CreateEPUB_EmptyChapters(t *testing.T) {
 
 	// Create EPUB
 	err := creator.CreateEPUB(chapters, fetcher)
-
 	if err != nil {
 		t.Fatalf("CreateEPUB() with empty chapters failed: %v", err)
 	}
@@ -178,7 +176,6 @@ func TestEPUBCreator_CreateEPUB_FetchError(t *testing.T) {
 
 	// Create EPUB (should continue despite one chapter failing)
 	err := creator.CreateEPUB(chapters, fetcher)
-
 	if err != nil {
 		t.Fatalf("CreateEPUB() failed: %v", err)
 	}
@@ -211,7 +208,6 @@ func TestEPUBCreator_CreateEPUB_NoProgressCallback(t *testing.T) {
 
 	// Create EPUB (should work without progress callback)
 	err := creator.CreateEPUB(chapters, fetcher)
-
 	if err != nil {
 		t.Fatalf("CreateEPUB() without progress callback failed: %v", err)
 	}
@@ -235,3 +231,4 @@ func TestEPUBCreator_ImplementsInterface(t *testing.T) {
 func TestMockFetcher_ImplementsInterface(t *testing.T) {
 	var _ ChapterContentFetcher = (*mockChapterContentFetcher)(nil)
 }
+

@@ -153,3 +153,4 @@ func TestFetchAndParse(t *testing.T) {
 		}
 	})
 }
+

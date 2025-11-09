@@ -51,3 +51,4 @@ func (f *Formatter) SetCSS(css string) {
 func (f *Formatter) GetCSS() string {
 	return f.css
 }
+

@@ -75,3 +75,4 @@ func (s *WanderingInnScraper) FetchChapterContent(url, title string) (string, er
 func (s *WanderingInnScraper) isChapterLink(title, href string) bool {
 	return config.ChapterPattern.MatchString(title) && !strings.Contains(strings.ToLower(title), "table of contents")
 }
+

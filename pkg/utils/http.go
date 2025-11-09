@@ -35,3 +35,4 @@ func FetchAndParse(url string) (*html.Node, error) {
 
 	return html.Parse(resp.Body)
 }
+

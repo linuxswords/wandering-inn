@@ -64,3 +64,4 @@ func (c *EPUBCreator) CreateEPUB(chapters []models.Chapter, scraper ChapterConte
 	fmt.Printf("EPUB created successfully: %s\n", filename)
 	return nil
 }
+

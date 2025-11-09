@@ -151,7 +151,6 @@ func TestWanderingInnScraper_FetchChapterContent(t *testing.T) {
 
 	scraper := NewWanderingInnScraper()
 	content, err := scraper.FetchChapterContent(server.URL, "Test Chapter")
-
 	if err != nil {
 		t.Fatalf("FetchChapterContent() failed: %v", err)
 	}
@@ -216,3 +215,4 @@ func TestChapterSorting(t *testing.T) {
 		}
 	}
 }
+

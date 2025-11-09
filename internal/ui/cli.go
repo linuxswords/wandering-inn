@@ -22,7 +22,7 @@ var (
 
 	// Style for selected range (between start and cursor in end selector)
 	selectedStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("0")).  // Black
+			Foreground(lipgloss.Color("0")).   // Black
 			Background(lipgloss.Color("120")). // Light green
 			Bold(false)
 )
@@ -252,7 +252,6 @@ func (cli *CLI) getStartChapterTextInput(totalChapters int) int {
 
 		input = strings.TrimSpace(input)
 		startChapter, err := strconv.Atoi(input)
-
 		if err != nil {
 			fmt.Println("Please enter a valid number.")
 			continue
@@ -282,7 +281,6 @@ func (cli *CLI) getEndChapterTextInput(totalChapters, startChapter int) int {
 		}
 
 		endChapter, err := strconv.Atoi(input)
-
 		if err != nil {
 			fmt.Println("Please enter a valid number.")
 			continue
@@ -345,4 +343,3 @@ func max(a, b int) int {
 	}
 	return b
 }
-
