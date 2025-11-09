@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/linuxswords/wandering-inn/actions/workflows/test.yml/badge.svg)](https://github.com/linuxswords/wandering-inn/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/linuxswords/wandering-inn)](https://goreportcard.com/report/github.com/linuxswords/wandering-inn)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPLv3](https://img.shields.io/badge/license-AGPLv3-blue.svg?style=plastic)](https://www.gnu.org/licenses/agpl-3.0.html)
 
 A Go tool that creates EPUB files from The Wandering Inn webserial by pirateaba.
 
