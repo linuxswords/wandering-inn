@@ -8,61 +8,89 @@ A Go tool that creates EPUB files from The Wandering Inn webserial by pirateaba.
 ## Features
 
 - Downloads table of contents from wanderinginn.com
-- Interactive chapter selection - choose which chapter to start from
-- Downloads all chapters from selected chapter to the end in correct order
+- **Interactive chapter selection UI** with arrow keys/vim bindings
+  - Choose which chapter to start from
+  - Choose which chapter to end at
+  - **Color highlighting** shows your current selection and selected range
+- Downloads chosen chapters in correct order
 - Creates a properly formatted EPUB file
 
 ## Installation
 
 1. Make sure you have Go installed (version 1.21 or higher)
-2. Clone or download this project
+2. Clone this repository:
+   ```bash
+   git clone https://github.com/linuxswords/wandering-inn.git
+   cd wandering-inn
+   ```
 3. Install dependencies:
    ```bash
-   go mod tidy
+   go mod download
    ```
 
 ## Usage
 
 1. Run the tool:
    ```bash
-   go run main.go
+   go run ./cmd/wandering-inn
+   ```
+   Or build and run:
+   ```bash
+   go build ./cmd/wandering-inn
+   ./wandering-inn
    ```
 
 2. The tool will:
    - Fetch the table of contents from wanderinginn.com
-   - Display the first few chapters found
-   - Ask you which chapter to start downloading from
-   - Download all chapters from that point to the end
-   - Create `wandering_inn.epub` in the current directory
+   - Show an **interactive chapter selector** (use ↑/↓ arrow keys or j/k vim keys)
+   - Ask you which chapter to **start** from
+   - Ask you which chapter to **end** at (with color highlighting of your selection)
+   - Download all selected chapters
+   - Create an EPUB file in the current directory (e.g., `wandering_inn_chapter1-100.epub`)
 
 ## Example
 
 ```bash
-$ go run main.go
+$ go run ./cmd/wandering-inn
 Wandering Inn EPUB Creator
 ==========================
-Found 450 chapters
-First few chapters:
-1. Prologue
-2. 1.00
-3. 1.01
-4. 1.02
-5. 1.03
-Enter starting chapter number (1-450): 100
-Creating EPUB with 351 chapters starting from chapter 100...
-Downloading chapter 1/351: 2.00
-Downloading chapter 2/351: 2.01
+Select starting chapter (1-450):
+Use ↑/↓ arrow keys or j/k (vim keys) to navigate, Enter to select, 'q' to quit
+
+  ...
+  > 100. 2.00
+    101. 2.01
+  ...
+
+[After selecting start chapter]
+
+Select ending chapter (100-450, default: 450):
+Use ↑/↓ arrow keys or j/k (vim keys) to navigate, Enter to select, 'q' to quit
+
+  ...
+    100. 2.00     [highlighted in green - start of range]
+    101. 2.01     [highlighted in green - in range]
+  > 150. 2.51     [highlighted in purple - cursor position]
+    151. 2.52
+  ...
+
+Creating EPUB with 51 chapters from chapter 100 to 150...
+Downloading chapter 1/51: 2.00
+Downloading chapter 2/51: 2.01
 ...
-EPUB created successfully: wandering_inn.epub
+EPUB created successfully: wandering_inn_2.00-2.51.epub
 ```
 
 ## Dependencies
 
 - [go-epub](https://github.com/go-shiori/go-epub) - For EPUB creation
-- Standard Go libraries for HTTP requests and HTML parsing
+- [bubbletea](https://github.com/charmbracelet/bubbletea) - For interactive terminal UI
+- [lipgloss](https://github.com/charmbracelet/lipgloss) - For terminal styling and colors
+- [golang.org/x/net](https://pkg.go.dev/golang.org/x/net) - For HTML parsing
 
 ## Notes
 
 - The tool ensures chapters are downloaded in the correct order as they appear in the table of contents
 - If a chapter fails to download, the tool will show a warning and continue with the next chapter
-- The resulting EPUB file will be named `wandering_inn_chaptertitle.epub`
+- The resulting EPUB file will be named based on the selected chapters (e.g., `wandering_inn_2.00-2.51.epub`)
+- You can quit the interactive selectors at any time by pressing 'q' or ESC
