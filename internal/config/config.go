@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	ChapterPattern = regexp.MustCompile(`(?i)(chapter|prologue|epilogue|interlude|\d+\.\d+)`)
+	ChapterPattern = regexp.MustCompile(`(?i)(chapter|prologue|epilogue|interlude|pt|\d+\.\d+)`)
 
 	NavigationTerms = []string{
 		"previous chapter",
