@@ -22,8 +22,7 @@ func main() {
 
 	cli.PrintChapterInfo(chapters)
 
-	startIndex := cli.GetStartChapterInteractive(chapters)
-	endIndex := cli.GetEndChapterInteractive(chapters, startIndex)
+	startIndex, endIndex := cli.GetChapterRange(chapters)
 
 	selectedChapters := chapters[startIndex-1 : endIndex]
 
