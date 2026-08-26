@@ -34,12 +34,11 @@ var (
 			Bold(true)
 )
 
-// bookPattern matches chapter titles that start with a book number like "7.6" or "10.62 NY".
+// bookPattern matches chapter titles starting with a book number e.g. "7.6 R" or "10.62 NY".
 var bookPattern = regexp.MustCompile(`^(\d+)\.`)
 
 // computeBooks assigns a book number to every chapter. Chapters whose titles start with
-// "N." (e.g. "7.6 R") get that N as their book. Interludes and other specials inherit
-// the last seen book number.
+// "N." get that N as their book; interludes and specials inherit the last seen book.
 // Returns a per-chapter book slice and a map from book number → first chapter index (0-based).
 func computeBooks(chapters []models.Chapter) ([]int, map[int]int) {
 	books := make([]int, len(chapters))
@@ -58,9 +57,157 @@ func computeBooks(chapters []models.Chapter) ([]int, map[int]int) {
 	return books, bookMap
 }
 
-type CLI struct {
-	reader *bufio.Reader
+// bookEntry holds the computed chapter range for one book.
+type bookEntry struct {
+	bookNum      int
+	firstChapter int // 1-indexed
+	lastChapter  int // 1-indexed
+	firstTitle   string
+	lastTitle    string
 }
+
+func buildBookEntries(chapters []models.Chapter, books []int, bookMap map[int]int) []bookEntry {
+	seen := make(map[int]bool)
+	var bookNums []int
+	for _, b := range books {
+		if !seen[b] {
+			seen[b] = true
+			bookNums = append(bookNums, b)
+		}
+	}
+
+	entries := make([]bookEntry, len(bookNums))
+	for i, bn := range bookNums {
+		first := bookMap[bn]
+		var last int
+		if i+1 < len(bookNums) {
+			last = bookMap[bookNums[i+1]] - 1
+		} else {
+			last = len(chapters) - 1
+		}
+		entries[i] = bookEntry{
+			bookNum:      bn,
+			firstChapter: first + 1,
+			lastChapter:  last + 1,
+			firstTitle:   chapters[first].Title,
+			lastTitle:    chapters[last].Title,
+		}
+	}
+	return entries
+}
+
+// ── Book selector ─────────────────────────────────────────────────────────────
+
+type bookSelectorModel struct {
+	entries     []bookEntry
+	cursor      int
+	total       int
+	quit        bool
+	wholeBook   bool // true = Enter pressed (whole book), false = c pressed (custom)
+	done        bool
+	inputBuffer string
+}
+
+func (m bookSelectorModel) Init() tea.Cmd { return nil }
+
+func (m bookSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q", "esc":
+			m.quit = true
+			return m, tea.Quit
+		case "up", "k":
+			m.inputBuffer = ""
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		case "down", "j":
+			m.inputBuffer = ""
+			if m.cursor < m.total-1 {
+				m.cursor++
+			}
+		case "g":
+			m.inputBuffer = ""
+			m.cursor = 0
+		case "G":
+			m.inputBuffer = ""
+			m.cursor = m.total - 1
+		case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			m.inputBuffer += msg.String()
+		case "backspace":
+			if len(m.inputBuffer) > 0 {
+				m.inputBuffer = m.inputBuffer[:len(m.inputBuffer)-1]
+			}
+		case "enter":
+			if m.inputBuffer != "" {
+				n, err := strconv.Atoi(m.inputBuffer)
+				m.inputBuffer = ""
+				if err == nil {
+					for i, e := range m.entries {
+						if e.bookNum == n {
+							m.cursor = i
+							break
+						}
+					}
+				}
+			} else {
+				m.wholeBook = true
+				m.done = true
+				return m, tea.Quit
+			}
+		case "c":
+			m.inputBuffer = ""
+			m.wholeBook = false
+			m.done = true
+			return m, tea.Quit
+		}
+	}
+	return m, nil
+}
+
+func (m bookSelectorModel) View() string {
+	s := "Wandering Inn EPUB Creator\n"
+	s += "==========================\n"
+	s += "Select a book:\n"
+	s += "↑/↓ j/k navigate  g/G first/last  type book number+Enter to jump\n"
+	s += "Enter = whole book  c = pick chapters within book\n\n"
+
+	windowSize := 12
+	start := max(0, m.cursor-windowSize/2)
+	end := min(m.total-1, start+windowSize-1)
+	if end == m.total-1 {
+		start = max(0, m.total-windowSize)
+	}
+
+	if start > 0 {
+		s += fmt.Sprintf("  ... (%d more above)\n", start)
+	}
+
+	for i := start; i <= end; i++ {
+		e := m.entries[i]
+		count := e.lastChapter - e.firstChapter + 1
+		line := fmt.Sprintf("Book %-3d  %3d chapters  (ch %d–%d)  %s → %s",
+			e.bookNum, count, e.firstChapter, e.lastChapter, e.firstTitle, e.lastTitle)
+		if m.cursor == i {
+			s += cursorStyle.Render("> "+line) + "\n"
+		} else {
+			s += "  " + line + "\n"
+		}
+	}
+
+	if end < m.total-1 {
+		s += fmt.Sprintf("  ... (%d more below)\n", m.total-1-end)
+	}
+
+	if m.inputBuffer != "" {
+		s += "\n" + inputStyle.Render(fmt.Sprintf("Jump to book: %s▌", m.inputBuffer))
+	}
+
+	return s
+}
+
+// ── Chapter selectors ──────────────────────────────────────────────────────────
 
 type chapterSelectorModel struct {
 	chapters    []models.Chapter
@@ -85,57 +232,7 @@ type endChapterSelectorModel struct {
 	inputBuffer  string
 }
 
-func NewCLI() *CLI {
-	return &CLI{
-		reader: bufio.NewReader(os.Stdin),
-	}
-}
-
-func (cli *CLI) PrintWelcome() {
-	fmt.Println("Wandering Inn EPUB Creator")
-	fmt.Println("==========================")
-}
-
-func (cli *CLI) PrintChapterInfo(chapters []models.Chapter) {
-	fmt.Printf("Found %d chapters\n", len(chapters))
-	fmt.Printf("Latest %d chapters:\n", config.LatestChaptersCount)
-	start := max(0, len(chapters)-config.LatestChaptersCount)
-	for i := start; i < len(chapters); i++ {
-		fmt.Printf("%d. %s\n", i+1, chapters[i].Title)
-	}
-}
-
-func (cli *CLI) GetStartChapter() int {
-	return cli.GetStartChapterInteractive(nil)
-}
-
-func (cli *CLI) GetStartChapterInteractive(chapters []models.Chapter) int {
-	books, bookMap := computeBooks(chapters)
-	m := chapterSelectorModel{
-		chapters: chapters,
-		cursor:   len(chapters) - 1,
-		total:    len(chapters),
-		books:    books,
-		bookMap:  bookMap,
-	}
-
-	p := tea.NewProgram(m, tea.WithAltScreen())
-	finalModel, err := p.Run()
-	if err != nil {
-		return cli.getStartChapterTextInput(len(chapters))
-	}
-
-	if finalModel.(chapterSelectorModel).quit {
-		fmt.Println("Exiting...")
-		os.Exit(0)
-	}
-
-	return finalModel.(chapterSelectorModel).selected
-}
-
-func (m chapterSelectorModel) Init() tea.Cmd {
-	return nil
-}
+func (m chapterSelectorModel) Init() tea.Cmd { return nil }
 
 func (m chapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -161,7 +258,6 @@ func (m chapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inputBuffer = ""
 			m.cursor = m.total - 1
 		case "[":
-			// Jump to start of current book; if already there, jump to start of previous book.
 			m.inputBuffer = ""
 			if len(m.books) > 0 {
 				cur := m.books[m.cursor]
@@ -174,7 +270,6 @@ func (m chapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case "]":
-			// Jump to the start of the next book.
 			m.inputBuffer = ""
 			if len(m.books) > 0 {
 				cur := m.books[m.cursor]
@@ -241,12 +336,10 @@ func (m chapterSelectorModel) View() string {
 				prevBook = book
 			}
 		}
-
 		chapterTitle := fmt.Sprintf("Chapter %d", i+1)
 		if m.chapters != nil && i < len(m.chapters) {
 			chapterTitle = m.chapters[i].Title
 		}
-
 		if m.cursor == i {
 			s += cursorStyle.Render(fmt.Sprintf("> %d. %s", i+1, chapterTitle)) + "\n"
 		} else {
@@ -265,9 +358,7 @@ func (m chapterSelectorModel) View() string {
 	return s
 }
 
-func (m endChapterSelectorModel) Init() tea.Cmd {
-	return nil
-}
+func (m endChapterSelectorModel) Init() tea.Cmd { return nil }
 
 func (m endChapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	minCursor := m.startChapter - 1
@@ -291,15 +382,12 @@ func (m endChapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inputBuffer = ""
 			m.cursor = m.total - 1
 		case "[":
-			// Jump to start of current book (not below startChapter).
 			m.inputBuffer = ""
 			if len(m.books) > 0 {
 				cur := m.books[m.cursor]
-				target := max(minCursor, m.bookMap[cur])
-				m.cursor = target
+				m.cursor = max(minCursor, m.bookMap[cur])
 			}
 		case "]":
-			// Jump to last chapter of the current book.
 			m.inputBuffer = ""
 			if len(m.books) > 0 {
 				cur := m.books[m.cursor]
@@ -366,14 +454,11 @@ func (m endChapterSelectorModel) View() string {
 				prevBook = book
 			}
 		}
-
 		chapterTitle := fmt.Sprintf("Chapter %d", i+1)
 		if m.chapters != nil && i < len(m.chapters) {
 			chapterTitle = m.chapters[i].Title
 		}
-
 		inRange := i >= m.startChapter-1 && i <= m.cursor
-
 		if m.cursor == i {
 			s += cursorStyle.Render(fmt.Sprintf("> %d. %s", i+1, chapterTitle)) + "\n"
 		} else if inRange {
@@ -394,77 +479,92 @@ func (m endChapterSelectorModel) View() string {
 	return s
 }
 
-func (cli *CLI) getStartChapterTextInput(totalChapters int) int {
-	for {
-		fmt.Printf("Enter starting chapter number (1-%d): ", totalChapters)
-		input, err := cli.reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading input, please try again.")
-			continue
-		}
+// ── CLI methods ────────────────────────────────────────────────────────────────
 
-		input = strings.TrimSpace(input)
-		startChapter, err := strconv.Atoi(input)
-		if err != nil {
-			fmt.Println("Please enter a valid number.")
-			continue
-		}
+type CLI struct {
+	reader *bufio.Reader
+}
 
-		if startChapter < 1 || startChapter > totalChapters {
-			fmt.Printf("Please enter a number between 1 and %d.\n", totalChapters)
-			continue
-		}
+func NewCLI() *CLI {
+	return &CLI{reader: bufio.NewReader(os.Stdin)}
+}
 
-		return startChapter
+func (cli *CLI) PrintWelcome() {
+	fmt.Println("Wandering Inn EPUB Creator")
+	fmt.Println("==========================")
+}
+
+func (cli *CLI) PrintChapterInfo(chapters []models.Chapter) {
+	fmt.Printf("Found %d chapters\n", len(chapters))
+	fmt.Printf("Latest %d chapters:\n", config.LatestChaptersCount)
+	start := max(0, len(chapters)-config.LatestChaptersCount)
+	for i := start; i < len(chapters); i++ {
+		fmt.Printf("%d. %s\n", i+1, chapters[i].Title)
 	}
 }
 
-func (cli *CLI) getEndChapterTextInput(totalChapters, startChapter int) int {
-	for {
-		fmt.Printf("Enter ending chapter number (%d-%d, default: %d): ", startChapter, totalChapters, totalChapters)
-		input, err := cli.reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading input, please try again.")
-			continue
-		}
-
-		input = strings.TrimSpace(input)
-		if input == "" {
-			return totalChapters
-		}
-
-		endChapter, err := strconv.Atoi(input)
-		if err != nil {
-			fmt.Println("Please enter a valid number.")
-			continue
-		}
-
-		if endChapter < startChapter || endChapter > totalChapters {
-			fmt.Printf("Please enter a number between %d and %d.\n", startChapter, totalChapters)
-			continue
-		}
-
-		return endChapter
-	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func (cli *CLI) PrintCreationInfo(numChapters, startIndex, endIndex int) {
-	if startIndex == endIndex {
-		fmt.Printf("Creating EPUB with 1 chapter: chapter %d...\n", startIndex)
-	} else {
-		fmt.Printf("Creating EPUB with %d chapters from chapter %d to %d...\n", numChapters, startIndex, endIndex)
-	}
-}
-
-func (cli *CLI) GetEndChapterInteractive(chapters []models.Chapter, startChapter int) int {
+// GetChapterRange shows the book selector first, then either returns the whole
+// book immediately (Enter) or drops into chapter selectors (c).
+func (cli *CLI) GetChapterRange(chapters []models.Chapter) (int, int) {
 	books, bookMap := computeBooks(chapters)
+	entries := buildBookEntries(chapters, books, bookMap)
+
+	bm := bookSelectorModel{
+		entries: entries,
+		cursor:  len(entries) - 1,
+		total:   len(entries),
+	}
+
+	p := tea.NewProgram(bm, tea.WithAltScreen())
+	finalModel, err := p.Run()
+	if err != nil {
+		start := cli.runStartSelector(chapters, books, bookMap, len(chapters)-1)
+		end := cli.runEndSelector(chapters, books, bookMap, start)
+		return start, end
+	}
+
+	result := finalModel.(bookSelectorModel)
+	if result.quit {
+		fmt.Println("Exiting...")
+		os.Exit(0)
+	}
+
+	selected := result.entries[result.cursor]
+
+	if result.wholeBook {
+		return selected.firstChapter, selected.lastChapter
+	}
+
+	// Custom: chapter selectors starting at the book's first chapter.
+	startChapter := cli.runStartSelector(chapters, books, bookMap, selected.firstChapter-1)
+	endChapter := cli.runEndSelector(chapters, books, bookMap, startChapter)
+	return startChapter, endChapter
+}
+
+func (cli *CLI) runStartSelector(chapters []models.Chapter, books []int, bookMap map[int]int, defaultCursor int) int {
+	m := chapterSelectorModel{
+		chapters: chapters,
+		cursor:   defaultCursor,
+		total:    len(chapters),
+		books:    books,
+		bookMap:  bookMap,
+	}
+
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	finalModel, err := p.Run()
+	if err != nil {
+		return cli.getStartChapterTextInput(len(chapters))
+	}
+
+	result := finalModel.(chapterSelectorModel)
+	if result.quit {
+		fmt.Println("Exiting...")
+		os.Exit(0)
+	}
+	return result.selected
+}
+
+func (cli *CLI) runEndSelector(chapters []models.Chapter, books []int, bookMap map[int]int, startChapter int) int {
 	m := endChapterSelectorModel{
 		chapters:     chapters,
 		cursor:       startChapter - 1,
@@ -480,16 +580,82 @@ func (cli *CLI) GetEndChapterInteractive(chapters []models.Chapter, startChapter
 		return cli.getEndChapterTextInput(len(chapters), startChapter)
 	}
 
-	if finalModel.(endChapterSelectorModel).quit {
+	result := finalModel.(endChapterSelectorModel)
+	if result.quit {
 		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
+	return result.selected
+}
 
-	return finalModel.(endChapterSelectorModel).selected
+// GetStartChapterInteractive is kept for compatibility.
+func (cli *CLI) GetStartChapterInteractive(chapters []models.Chapter) int {
+	books, bookMap := computeBooks(chapters)
+	return cli.runStartSelector(chapters, books, bookMap, len(chapters)-1)
+}
+
+// GetEndChapterInteractive is kept for compatibility.
+func (cli *CLI) GetEndChapterInteractive(chapters []models.Chapter, startChapter int) int {
+	books, bookMap := computeBooks(chapters)
+	return cli.runEndSelector(chapters, books, bookMap, startChapter)
+}
+
+func (cli *CLI) getStartChapterTextInput(totalChapters int) int {
+	for {
+		fmt.Printf("Enter starting chapter number (1-%d): ", totalChapters)
+		input, err := cli.reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input, please try again.")
+			continue
+		}
+		input = strings.TrimSpace(input)
+		n, err := strconv.Atoi(input)
+		if err != nil || n < 1 || n > totalChapters {
+			fmt.Printf("Please enter a number between 1 and %d.\n", totalChapters)
+			continue
+		}
+		return n
+	}
+}
+
+func (cli *CLI) getEndChapterTextInput(totalChapters, startChapter int) int {
+	for {
+		fmt.Printf("Enter ending chapter number (%d-%d, default: %d): ", startChapter, totalChapters, totalChapters)
+		input, err := cli.reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input, please try again.")
+			continue
+		}
+		input = strings.TrimSpace(input)
+		if input == "" {
+			return totalChapters
+		}
+		n, err := strconv.Atoi(input)
+		if err != nil || n < startChapter || n > totalChapters {
+			fmt.Printf("Please enter a number between %d and %d.\n", startChapter, totalChapters)
+			continue
+		}
+		return n
+	}
+}
+
+func (cli *CLI) PrintCreationInfo(numChapters, startIndex, endIndex int) {
+	if startIndex == endIndex {
+		fmt.Printf("Creating EPUB with 1 chapter: chapter %d...\n", startIndex)
+	} else {
+		fmt.Printf("Creating EPUB with %d chapters from chapter %d to %d...\n", numChapters, startIndex, endIndex)
+	}
 }
 
 func (cli *CLI) PrintDownloadProgress(current, total int, title string) {
 	fmt.Printf("Downloading chapter %d/%d: %s\n", current, total, title)
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func max(a, b int) int {
