@@ -104,7 +104,6 @@ type bookSelectorModel struct {
 	total       int
 	quit        bool
 	wholeBook   bool // true = Enter pressed (whole book), false = c pressed (custom)
-	done        bool
 	inputBuffer string
 }
 
@@ -153,13 +152,11 @@ func (m bookSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			} else {
 				m.wholeBook = true
-				m.done = true
 				return m, tea.Quit
 			}
 		case "c":
 			m.inputBuffer = ""
 			m.wholeBook = false
-			m.done = true
 			return m, tea.Quit
 		}
 	}
@@ -378,6 +375,9 @@ func (m endChapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor < m.total-1 {
 				m.cursor++
 			}
+		case "g":
+			m.inputBuffer = ""
+			m.cursor = minCursor
 		case "G":
 			m.inputBuffer = ""
 			m.cursor = m.total - 1
@@ -385,7 +385,9 @@ func (m endChapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inputBuffer = ""
 			if len(m.books) > 0 {
 				cur := m.books[m.cursor]
-				m.cursor = max(minCursor, m.bookMap[cur])
+				if bookStart, ok := m.bookMap[cur]; ok {
+					m.cursor = max(minCursor, bookStart)
+				}
 			}
 		case "]":
 			m.inputBuffer = ""
@@ -427,12 +429,12 @@ func (m endChapterSelectorModel) View() string {
 
 	s := "Wandering Inn EPUB Creator\n"
 	s += "==========================\n"
-	s += fmt.Sprintf("Select ending chapter (%d-%d, default: %d", m.startChapter, m.total, m.total)
+	s += fmt.Sprintf("Select ending chapter (%d-%d, default: %d", m.startChapter, m.total, m.cursor+1)
 	if currentBook > 0 {
 		s += fmt.Sprintf(", Book %d", currentBook)
 	}
 	s += "):\n"
-	s += "↑/↓ j/k navigate  [ start of book  ] end of book  G last  type number+Enter to jump\n\n"
+	s += "↑/↓ j/k navigate  [ start of book  ] end of book  g/G first/last  type number+Enter to jump\n\n"
 
 	windowSize := 10
 	start := max(m.startChapter-1, max(0, m.cursor-windowSize/2))
@@ -506,6 +508,11 @@ func (cli *CLI) PrintChapterInfo(chapters []models.Chapter) {
 // GetChapterRange shows the book selector first, then either returns the whole
 // book immediately (Enter) or drops into chapter selectors (c).
 func (cli *CLI) GetChapterRange(chapters []models.Chapter) (int, int) {
+	if len(chapters) == 0 {
+		fmt.Println("No chapters found.")
+		os.Exit(1)
+	}
+
 	books, bookMap := computeBooks(chapters)
 	entries := buildBookEntries(chapters, books, bookMap)
 
