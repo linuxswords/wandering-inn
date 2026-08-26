@@ -15,20 +15,24 @@ import (
 )
 
 var (
+	// Style for the current cursor position
 	cursorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("15")). // White
 			Background(lipgloss.Color("63")). // Purple
 			Bold(true)
 
+	// Style for selected range (between start and cursor in end selector)
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("0")).   // Black
 			Background(lipgloss.Color("120")). // Light green
 			Bold(false)
 
+	// Style for book section headers in the chapter list
 	bookHeaderStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("11")). // Yellow
 			Bold(true)
 
+	// Style for the numeric jump input prompt
 	inputStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("14")). // Cyan
 			Bold(true)
@@ -290,7 +294,7 @@ func (m chapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor = n - 1
 				}
 			} else {
-				m.selected = m.cursor + 1
+				m.selected = m.cursor + 1 // Convert to 1-indexed
 				return m, tea.Quit
 			}
 		}
@@ -313,9 +317,12 @@ func (m chapterSelectorModel) View() string {
 	s += "):\n"
 	s += "↑/↓ j/k navigate  [ ] jump books  g/G first/last  type number+Enter to jump\n\n"
 
+	// Show a window of chapters around the selected one
 	windowSize := 10
 	start := max(0, m.cursor-windowSize/2)
 	end := min(m.total-1, start+windowSize-1)
+
+	// Adjust start if we're near the end
 	if end == m.total-1 {
 		start = max(0, m.total-windowSize)
 	}
@@ -413,7 +420,7 @@ func (m endChapterSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor = n - 1
 				}
 			} else {
-				m.selected = m.cursor + 1
+				m.selected = m.cursor + 1 // Convert to 1-indexed
 				return m, tea.Quit
 			}
 		}
@@ -436,9 +443,12 @@ func (m endChapterSelectorModel) View() string {
 	s += "):\n"
 	s += "↑/↓ j/k navigate  [ start of book  ] end of book  g/G first/last  type number+Enter to jump\n\n"
 
+	// Show a window of chapters around the selected one
 	windowSize := 10
 	start := max(m.startChapter-1, max(0, m.cursor-windowSize/2))
 	end := min(m.total-1, start+windowSize-1)
+
+	// Adjust start if we're near the end
 	if end == m.total-1 {
 		start = max(m.startChapter-1, m.total-windowSize)
 	}
@@ -460,10 +470,13 @@ func (m endChapterSelectorModel) View() string {
 		if m.chapters != nil && i < len(m.chapters) {
 			chapterTitle = m.chapters[i].Title
 		}
+		// Determine if this chapter is in the selected range
 		inRange := i >= m.startChapter-1 && i <= m.cursor
 		if m.cursor == i {
+			// Current cursor position - highlighted with cursor style
 			s += cursorStyle.Render(fmt.Sprintf("> %d. %s", i+1, chapterTitle)) + "\n"
 		} else if inRange {
+			// In the selected range but not at cursor - show with selected style
 			s += selectedStyle.Render(fmt.Sprintf("  %d. %s", i+1, chapterTitle)) + "\n"
 		} else {
 			s += fmt.Sprintf("  %d. %s\n", i+1, chapterTitle)
@@ -560,6 +573,7 @@ func (cli *CLI) runStartSelector(chapters []models.Chapter, books []int, bookMap
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
+		// Fallback to text input if bubbletea fails
 		return cli.getStartChapterTextInput(len(chapters))
 	}
 
@@ -574,7 +588,7 @@ func (cli *CLI) runStartSelector(chapters []models.Chapter, books []int, bookMap
 func (cli *CLI) runEndSelector(chapters []models.Chapter, books []int, bookMap map[int]int, startChapter int) int {
 	m := endChapterSelectorModel{
 		chapters:     chapters,
-		cursor:       startChapter - 1,
+		cursor:       startChapter - 1, // Start at the selected start chapter (0-indexed)
 		total:        len(chapters),
 		startChapter: startChapter,
 		books:        books,
@@ -584,6 +598,7 @@ func (cli *CLI) runEndSelector(chapters []models.Chapter, books []int, bookMap m
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
+		// Fallback to text input if bubbletea fails
 		return cli.getEndChapterTextInput(len(chapters), startChapter)
 	}
 
@@ -635,7 +650,7 @@ func (cli *CLI) getEndChapterTextInput(totalChapters, startChapter int) int {
 		}
 		input = strings.TrimSpace(input)
 		if input == "" {
-			return totalChapters
+			return totalChapters // Default to last chapter
 		}
 		n, err := strconv.Atoi(input)
 		if err != nil || n < startChapter || n > totalChapters {
