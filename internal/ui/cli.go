@@ -16,21 +16,21 @@ import (
 
 var (
 	cursorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("15")).
-			Background(lipgloss.Color("63")).
+			Foreground(lipgloss.Color("15")). // White
+			Background(lipgloss.Color("63")). // Purple
 			Bold(true)
 
 	selectedStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("0")).
-			Background(lipgloss.Color("120")).
+			Foreground(lipgloss.Color("0")).   // Black
+			Background(lipgloss.Color("120")). // Light green
 			Bold(false)
 
 	bookHeaderStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("11")).
+			Foreground(lipgloss.Color("11")). // Yellow
 			Bold(true)
 
 	inputStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("14")).
+			Foreground(lipgloss.Color("14")). // Cyan
 			Bold(true)
 )
 
