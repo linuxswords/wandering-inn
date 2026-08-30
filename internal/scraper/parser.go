@@ -10,6 +10,19 @@ import (
 	"golang.org/x/net/html"
 )
 
+// whitespaceRun matches a run of HTML whitespace, which renders as a single
+// space regardless of length.
+var whitespaceRun = regexp.MustCompile(`[ \t\n\r\f\v]+`)
+
+// blockElements are the elements whose surrounding whitespace is source
+// indentation rather than content.
+var blockElements = map[string]bool{
+	"p": true, "div": true, "blockquote": true, "hr": true,
+	"h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true,
+	"ul": true, "ol": true, "li": true, "table": true, "tr": true, "td": true,
+	"section": true, "article": true, "figure": true, "figcaption": true,
+}
+
 type HTMLParser struct{}
 
 func NewHTMLParser() *HTMLParser {
@@ -32,6 +45,20 @@ func (p *HTMLParser) ExtractChapterHTML(n *html.Node, title string) string {
 	}
 
 	return ""
+}
+
+// isBetweenBlocks reports whether a node sits between block-level elements (or
+// at the edge of one), where whitespace carries no meaning. Dropping whitespace
+// between inline elements instead would run adjacent words together.
+func (p *HTMLParser) isBetweenBlocks(n *html.Node) bool {
+	return p.isBlockBoundary(n.PrevSibling) && p.isBlockBoundary(n.NextSibling)
+}
+
+func (p *HTMLParser) isBlockBoundary(sibling *html.Node) bool {
+	if sibling == nil {
+		return true
+	}
+	return sibling.Type == html.ElementNode && blockElements[sibling.Data]
 }
 
 // IsLockedChapter reports whether the page shows the Patreon paywall instead of
@@ -58,7 +85,13 @@ func (p *HTMLParser) extractHTMLContent(n *html.Node) string {
 		if p.isNavigationText(text) {
 			return ""
 		}
-		return html.EscapeString(n.Data)
+		// Source indentation between paragraphs is a large share of the output
+		// and renders as nothing, but whitespace between inline elements
+		// separates words and has to survive as a single space.
+		if text == "" && p.isBetweenBlocks(n) {
+			return ""
+		}
+		return html.EscapeString(whitespaceRun.ReplaceAllString(n.Data, " "))
 	}
 
 	if n.Type == html.ElementNode {

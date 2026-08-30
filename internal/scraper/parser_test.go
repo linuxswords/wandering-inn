@@ -473,3 +473,46 @@ func TestHTMLParser_IsLockedChapter(t *testing.T) {
 		})
 	}
 }
+
+func TestHTMLParser_ExtractChapterHTML_Whitespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		htmlStr  string
+		expected string
+	}{
+		{
+			name:     "indentation between blocks is dropped",
+			htmlStr:  "<div class=\"entry-content\">\n\t<p>One</p>\n\t<p>Two</p>\n</div>",
+			expected: "<h1>Test Chapter</h1>\n<p>One</p>\n<p>Two</p>\n",
+		},
+		{
+			name:     "whitespace between inline elements is kept as a single space",
+			htmlStr:  "<div class=\"entry-content\"><p><em>really</em>\n\t<em>hungry</em></p></div>",
+			expected: "<h1>Test Chapter</h1>\n<p><em>really</em> <em>hungry</em></p>\n",
+		},
+		{
+			name:     "whitespace between text and inline element is kept",
+			htmlStr:  "<div class=\"entry-content\"><p>complete the 3\n\t<em>following</em> trials</p></div>",
+			expected: "<h1>Test Chapter</h1>\n<p>complete the 3 <em>following</em> trials</p>\n",
+		},
+		{
+			name:     "runs of whitespace inside text collapse",
+			htmlStr:  "<div class=\"entry-content\"><p>Hello   \n   world</p></div>",
+			expected: "<h1>Test Chapter</h1>\n<p>Hello world</p>\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := html.Parse(strings.NewReader(tt.htmlStr))
+			if err != nil {
+				t.Fatalf("Failed to parse HTML: %v", err)
+			}
+
+			result := NewHTMLParser().ExtractChapterHTML(doc, "Test Chapter")
+			if result != tt.expected {
+				t.Errorf("ExtractChapterHTML() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
