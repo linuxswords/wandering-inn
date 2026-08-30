@@ -38,6 +38,11 @@ func (c *EPUBCreator) CreateEPUB(chapters []models.Chapter, scraper ChapterConte
 	e.SetAuthor(config.EpubAuthor)
 	e.SetDescription(config.EpubDescription)
 
+	cssPath, err := e.AddCSS(NewFormatter().DataURL(), "style.css")
+	if err != nil {
+		return err
+	}
+
 	for i, chapter := range chapters {
 		if c.progressCallback != nil {
 			c.progressCallback(i+1, len(chapters), chapter.Title)
@@ -49,7 +54,7 @@ func (c *EPUBCreator) CreateEPUB(chapters []models.Chapter, scraper ChapterConte
 			continue
 		}
 
-		_, err = e.AddSection(content, chapter.Title, "", "")
+		_, err = e.AddSection(content, chapter.Title, "", cssPath)
 		if err != nil {
 			return err
 		}

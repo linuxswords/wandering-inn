@@ -430,3 +430,46 @@ func TestHTMLParser_handleParagraph(t *testing.T) {
 		})
 	}
 }
+
+func TestHTMLParser_IsLockedChapter(t *testing.T) {
+	tests := []struct {
+		name     string
+		htmlStr  string
+		expected bool
+	}{
+		{
+			name:     "paywall notice in place of the chapter",
+			htmlStr:  `<div class="entry-content"><div class="patreon-protected-post"><h2>Patreon Exclusive</h2></div></div>`,
+			expected: true,
+		},
+		{
+			name:     "marker among other classes",
+			htmlStr:  `<div class="wrapper patreon-protected-post styled"><p>Locked</p></div>`,
+			expected: true,
+		},
+		{
+			name:     "regular chapter",
+			htmlStr:  `<div class="entry-content"><p>Chapter content here</p></div>`,
+			expected: false,
+		},
+		{
+			name:     "unrelated patreon link",
+			htmlStr:  `<div class="entry-content"><p>Support me on <a href="https://patreon.com">Patreon</a></p></div>`,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := html.Parse(strings.NewReader(tt.htmlStr))
+			if err != nil {
+				t.Fatalf("Failed to parse HTML: %v", err)
+			}
+
+			parser := NewHTMLParser()
+			if result := parser.IsLockedChapter(doc); result != tt.expected {
+				t.Errorf("IsLockedChapter() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

@@ -34,6 +34,24 @@ func (p *HTMLParser) ExtractChapterHTML(n *html.Node, title string) string {
 	return ""
 }
 
+// IsLockedChapter reports whether the page shows the Patreon paywall instead of
+// the chapter text. Such pages return 200 and carry a normal content container,
+// so the notice would otherwise be extracted as if it were the chapter.
+func (p *HTMLParser) IsLockedChapter(n *html.Node) bool {
+	if n.Type == html.ElementNode &&
+		strings.Contains(utils.GetAttr(n, "class"), config.LockedChapterClass) {
+		return true
+	}
+
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if p.IsLockedChapter(c) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (p *HTMLParser) extractHTMLContent(n *html.Node) string {
 	if n.Type == html.TextNode {
 		text := strings.TrimSpace(n.Data)

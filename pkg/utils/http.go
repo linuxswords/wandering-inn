@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"net/http"
 
 	"golang.org/x/net/html"
@@ -32,6 +33,12 @@ func FetchAndParse(url string) (*html.Node, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	// Error pages are valid HTML, so without this check they parse into an
+	// empty chapter instead of failing.
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetching %s: %s", url, resp.Status)
+	}
 
 	return html.Parse(resp.Body)
 }

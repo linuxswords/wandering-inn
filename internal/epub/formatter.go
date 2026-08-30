@@ -1,5 +1,7 @@
 package epub
 
+import "encoding/base64"
+
 const DefaultCSS = `
 body {
 	font-family: Georgia, serif;
@@ -50,4 +52,11 @@ func (f *Formatter) SetCSS(css string) {
 
 func (f *Formatter) GetCSS() string {
 	return f.css
+}
+
+// DataURL returns the stylesheet as an RFC 2397 data URL. go-epub's AddCSS
+// takes a source to fetch rather than the stylesheet itself, and a data URL is
+// how it accepts CSS that never touches disk.
+func (f *Formatter) DataURL() string {
+	return "data:text/css;base64," + base64.StdEncoding.EncodeToString([]byte(f.css))
 }

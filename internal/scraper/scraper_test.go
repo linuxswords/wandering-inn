@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -183,6 +184,73 @@ func TestWanderingInnScraper_FetchChapterContent_Error(t *testing.T) {
 	_, err = scraper.FetchChapterContent("http://localhost:99999/nonexistent", "Test Chapter")
 	if err == nil {
 		t.Error("Expected error for non-existent server, got nil")
+	}
+}
+
+func TestWanderingInnScraper_FetchChapterContent_Locked(t *testing.T) {
+	// A gated chapter is served with 200 and a normal content container; only
+	// the paywall notice inside distinguishes it from a real chapter.
+	lockedHTML := `
+<!DOCTYPE html>
+<html>
+<body>
+	<div class="entry-content">
+		<div class="patreon-protected-post">
+			<h2>Patreon Exclusive</h2>
+			<p>Support us on Patreon to access this content.</p>
+		</div>
+	</div>
+</body>
+</html>`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(lockedHTML))
+	}))
+	defer server.Close()
+
+	scraper := NewWanderingInnScraper()
+	content, err := scraper.FetchChapterContent(server.URL, "Test Chapter")
+	if !errors.Is(err, ErrChapterLocked) {
+		t.Errorf("FetchChapterContent() error = %v, want ErrChapterLocked", err)
+	}
+	if content != "" {
+		t.Errorf("FetchChapterContent() returned %q, want empty content", content)
+	}
+}
+
+func TestWanderingInnScraper_FetchChapterContent_NotFound(t *testing.T) {
+	// The error page carries a content container of its own, so the status code
+	// is the only thing separating it from a real chapter.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`<html><body><div class="entry-content"><p>Page not found.</p></div></body></html>`))
+	}))
+	defer server.Close()
+
+	scraper := NewWanderingInnScraper()
+	_, err := scraper.FetchChapterContent(server.URL, "Test Chapter")
+	if err == nil {
+		t.Fatal("Expected error for 404 response, got nil")
+	}
+	if !strings.Contains(err.Error(), "404") {
+		t.Errorf("FetchChapterContent() error = %v, want it to report the HTTP status", err)
+	}
+}
+
+func TestWanderingInnScraper_FetchChapterContent_NoContentContainer(t *testing.T) {
+	// A 200 page whose markup we don't recognise must fail loudly rather than
+	// contribute an empty chapter to the book.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body><div class="sidebar"><p>Nothing here</p></div></body></html>`))
+	}))
+	defer server.Close()
+
+	scraper := NewWanderingInnScraper()
+	if _, err := scraper.FetchChapterContent(server.URL, "Test Chapter"); err == nil {
+		t.Error("Expected error when no content container is found, got nil")
 	}
 }
 

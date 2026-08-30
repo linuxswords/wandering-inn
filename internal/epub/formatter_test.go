@@ -1,6 +1,7 @@
 package epub
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 )
@@ -55,6 +56,27 @@ func TestFormatter_GetCSS(t *testing.T) {
 				t.Errorf("GetCSS() = %v, want %v", result, tt.css)
 			}
 		})
+	}
+}
+
+func TestFormatter_DataURL(t *testing.T) {
+	formatter := NewFormatter()
+	css := "body { color: red; }"
+	formatter.SetCSS(css)
+
+	dataURL := formatter.DataURL()
+
+	const prefix = "data:text/css;base64,"
+	if !strings.HasPrefix(dataURL, prefix) {
+		t.Fatalf("DataURL() = %q, want prefix %q", dataURL, prefix)
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(dataURL, prefix))
+	if err != nil {
+		t.Fatalf("DataURL() payload is not valid base64: %v", err)
+	}
+	if string(decoded) != css {
+		t.Errorf("DataURL() decodes to %q, want %q", decoded, css)
 	}
 }
 

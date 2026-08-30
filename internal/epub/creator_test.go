@@ -1,8 +1,11 @@
 package epub
 
 import (
+	"archive/zip"
 	"errors"
+	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/linuxswords/wandering-inn/internal/models"
@@ -220,6 +223,73 @@ func TestEPUBCreator_CreateEPUB_NoProgressCallback(t *testing.T) {
 		// Clean up the test file
 		os.Remove(expectedFilename)
 	}
+}
+
+func TestEPUBCreator_CreateEPUB_IncludesStylesheet(t *testing.T) {
+	creator := NewEPUBCreator()
+
+	chapters := []models.Chapter{
+		{Title: "Chapter 1", URL: "url1", Index: 0},
+	}
+	fetcher := &mockChapterContentFetcher{
+		chapters: map[string]string{
+			"url1": `<p class="red">Content for chapter 1</p>`,
+		},
+	}
+
+	if err := creator.CreateEPUB(chapters, fetcher); err != nil {
+		t.Fatalf("CreateEPUB() failed: %v", err)
+	}
+
+	filename := "wandering_inn_chapter_1.epub"
+	defer os.Remove(filename)
+
+	r, err := zip.OpenReader(filename)
+	if err != nil {
+		t.Fatalf("Failed to open generated EPUB: %v", err)
+	}
+	defer r.Close()
+
+	var stylesheet, section string
+	for _, f := range r.File {
+		content, err := readZipEntry(f)
+		if err != nil {
+			t.Fatalf("Failed to read %s: %v", f.Name, err)
+		}
+		switch {
+		case strings.HasSuffix(f.Name, "style.css"):
+			stylesheet = content
+		case strings.HasSuffix(f.Name, ".xhtml") && strings.Contains(content, "Content for chapter 1"):
+			section = content
+		}
+	}
+
+	if stylesheet == "" {
+		t.Fatal("Generated EPUB does not contain style.css")
+	}
+	if !strings.Contains(stylesheet, ".red { color: #e74c3c; }") {
+		t.Error("style.css does not contain the color classes the parser emits")
+	}
+	if section == "" {
+		t.Fatal("Could not find the chapter section in the generated EPUB")
+	}
+	if !strings.Contains(section, "style.css") {
+		t.Errorf("Chapter section does not link the stylesheet:\n%s", section)
+	}
+}
+
+func readZipEntry(f *zip.File) (string, error) {
+	rc, err := f.Open()
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+
+	content, err := io.ReadAll(rc)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
 
 // Test that EPUBCreator implements the Creator interface

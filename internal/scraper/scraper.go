@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -9,6 +11,10 @@ import (
 	"github.com/linuxswords/wandering-inn/pkg/utils"
 	"golang.org/x/net/html"
 )
+
+// ErrChapterLocked is returned for chapters gated behind Patreon. The page
+// renders normally, but the body is a paywall notice rather than the text.
+var ErrChapterLocked = errors.New("chapter is Patreon-exclusive")
 
 type Scraper interface {
 	FetchTableOfContents() ([]models.Chapter, error)
@@ -68,7 +74,15 @@ func (s *WanderingInnScraper) FetchChapterContent(url, title string) (string, er
 	}
 
 	parser := NewHTMLParser()
+	if parser.IsLockedChapter(doc) {
+		return "", ErrChapterLocked
+	}
+
 	content := parser.ExtractChapterHTML(doc, title)
+	if content == "" {
+		return "", fmt.Errorf("no chapter content found at %s", url)
+	}
+
 	return content, nil
 }
 

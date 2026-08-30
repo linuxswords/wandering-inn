@@ -12,6 +12,10 @@ const (
 	DefaultFilename = "wandering_inn.epub"
 	MaxFilenameLen  = 50
 
+	// LockedChapterClass marks the paywall notice the site renders in place of
+	// the chapter body for Patreon-exclusive chapters.
+	LockedChapterClass = "patreon-protected-post"
+
 	LatestChaptersCount = 20
 )
 
